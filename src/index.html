@@ -1,26 +1,28 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
   <head>
     <meta charset="UTF-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link
-      rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/modern-normalize/1.1.0/modern-normalize.min.css"
-    />
-    <link rel="stylesheet" href="./styles/styles.css" />
-    <title>Gallery</title>
+    <title>Homework 11</title>
   </head>
   <body>
-    <div class="wrapp">
+    <div>
       <form class="search-form" id="search-form">
-        <input type="text" name="searchQuery" autocomplete="off" placeholder="Search images..." />
-        <button class="search__btn" type="submit">Search</button>
+        <input
+          class="search-form__input"
+          type="text"
+          name="searchQuery"
+          autocomplete="off"
+          placeholder="Search images..."
+        />
+
+        <button class="button" type="submit">Search</button>
       </form>
     </div>
-    <div class="gallery">
-      <a href="" class="photo-link"></a>
-    </div>
+
+    <div class="gallery"></div>
+
     <script src="./index.js"></script>
   </body>
 </html>

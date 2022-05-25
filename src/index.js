@@ -1,70 +1,67 @@
+import Notiflix from 'notiflix';
+import SimpleLightbox from 'simplelightbox';
+import 'simplelightbox/dist/simple-lightbox.min.css';
+
+import ApiService from './apies/searchImg.js';
+
+import pictureCard from './templates/renderHTML.hbs';
 import './styles/styles.css';
-import 'regenerator-runtime/runtime';
 
-import { Notify } from 'notiflix/build/notiflix-notify-aio';
-
-import { fetchPhotos } from './apies/searchImg';
-import { renderPhotos } from './templates/renderHTML';
-
-const form = document.querySelector('#search-form');
-const galleryBox = document.querySelector('.gallery');
-
-const state = {
-  query: null,
-  totalHits: 0,
-  page: 1,
-  hits: [],
+const refs = {
+  formEl: document.querySelector('.search-form'),
+  galleryEl: document.querySelector('.gallery'),
 };
 
-const observer = new IntersectionObserver((entries, observer) => {
-  const { hits, totalHits } = state;
-  const lastCard = entries[0];
-  if (!lastCard.isIntersecting || hits.length === totalHits) return;
-
-  observer.unobserve(lastCard.target);
-
-  state.page++;
-  renderGallery();
+const lightbox = new SimpleLightbox('.gallery a', {
+  captionsData: 'alt',
+  captionDelay: 250,
+  enableKeyboard: true,
 });
+lightbox.refresh();
 
-const handleSearch = e => {
+const apiService = new ApiService();
+
+function onSearch(e) {
   e.preventDefault();
-
-  const {
-    elements: { searchQuery },
-  } = e.currentTarget;
-
-  state.query = searchQuery.value.trim();
-
-  if (state.query.length) {
-    galleryBox.innerHTML = '';
-    state.page = 1;
-    renderGallery();
+  outputClear();
+  apiService.resetPage();
+  apiService.query = e.currentTarget.elements.searchQuery.value;
+  if (apiService.query.trim() === '') {
+    Notiflix.Notify.failure('Please fill in the field');
+    return;
   }
-};
 
-const renderGallery = async () => {
-  const { query, page } = state;
+  apiService.getPicters().then(({ data }) => {
+    appendPicters(data.hits);
+    lightbox.refresh();
+    if (data.totalHits === 0) {
+      Notiflix.Notify.failure(
+        'Sorry, there are no images matching your search query. Please try again',
+      );
+      return;
+    }
+    if (data.totalHits !== 0) {
+      Notiflix.Notify.success(`Hooray! We found ${data.totalHits} images!`);
+    }
+  });
+}
 
-  await fetchPhotos(query, page)
-    .then(res => {
-      const { data } = res;
+function appendPicters(card) {
+  refs.galleryEl.insertAdjacentHTML('beforeend', pictureCard(card));
+}
 
-      if (data.hits.length) {
-        if (page === 1) {
-          state.totalHits = data.totalHits;
-          state.hits = [];
-          Notify.success(`Hooray! We found ${data.totalHits} images.`);
-        }
+function outputClear() {
+  refs.galleryEl.innerHTML = '';
+}
 
-        state.hits = state.hits.concat(data.hits);
-        renderPhotos(data.hits);
+refs.formEl.addEventListener('submit', onSearch);
 
-        observer.observe(document.querySelector('.photo-card:last-child'));
-      } else
-        Notify.failure('Sorry, there are no images matching your search query. Please try again.');
-    })
-    .catch(e => console.error(e));
-};
-
-form.addEventListener('submit', handleSearch);
+window.addEventListener('scroll', () => {
+  const documentRect = document.documentElement.getBoundingClientRect();
+  if (documentRect.bottom < document.documentElement.clientHeight + 150) {
+    apiService.getPicters().then(({ data }) => {
+      appendPicters(data.hits);
+      lightbox.refresh();
+    });
+  }
+});
