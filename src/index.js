@@ -1,107 +1,70 @@
-import Notiflix from 'notiflix';
-import template from './templates/renderHTML.hbs';
-import searchImg from './apies/searchImg';
-import SimpleLightbox from 'simplelightbox';
-import 'simplelightbox/dist/simple-lightbox.min.css';
+import './styles/styles.css';
+import 'regenerator-runtime/runtime';
 
-const API = new searchImg();
-const lightbox = new SimpleLightbox('.photo-link');
+import { Notify } from 'notiflix/build/notiflix-notify-aio';
 
-const refs = {
-  form: document.querySelector('.search-form'),
-  gallery: document.querySelector('.gallery'),
-  showMoreBtn: document.querySelector('.load-more '),
+import { fetchPhotos } from './apies/searchImg';
+import { renderPhotos } from './templates/renderHTML';
+
+const form = document.querySelector('#search-form');
+const galleryBox = document.querySelector('.gallery');
+
+const state = {
+  query: null,
+  totalHits: 0,
+  page: 1,
+  hits: [],
 };
 
-async function onSearchForm(e) {
+const observer = new IntersectionObserver((entries, observer) => {
+  const { hits, totalHits } = state;
+  const lastCard = entries[0];
+  if (!lastCard.isIntersecting || hits.length === totalHits) return;
+
+  observer.unobserve(lastCard.target);
+
+  state.page++;
+  renderGallery();
+});
+
+const handleSearch = e => {
   e.preventDefault();
 
-  const inputValue = e.currentTarget.elements.searchQuery.value;
+  const {
+    elements: { searchQuery },
+  } = e.currentTarget;
 
-  if (inputValue === '') {
-    chekInputNotEmpty();
-    return;
+  state.query = searchQuery.value.trim();
+
+  if (state.query.length) {
+    galleryBox.innerHTML = '';
+    state.page = 1;
+    renderGallery();
   }
+};
 
-  API.resetPage();
-  API.queryValue(inputValue);
+const renderGallery = async () => {
+  const { query, page } = state;
 
-  try {
-    const result = await API.fetchData();
+  await fetchPhotos(query, page)
+    .then(res => {
+      const { data } = res;
 
-    resetMarkup();
-    rewrightMarkup(result);
+      if (data.hits.length) {
+        if (page === 1) {
+          state.totalHits = data.totalHits;
+          state.hits = [];
+          Notify.success(`Hooray! We found ${data.totalHits} images.`);
+        }
 
-    API.setTotalHits(result.data.totalHits);
-    lightbox.refresh();
-    Notiflix.Notify.success(`Hooray! We found ${API.totalHits} images.`);
+        state.hits = state.hits.concat(data.hits);
+        renderPhotos(data.hits);
 
-    showShowMoreBtn();
-  } catch (error) {
-    Notiflix.Notify.failure(
-      'Sorry, there are no images matching your search query. Please try again.',
-    );
-  }
-}
+        observer.observe(document.querySelector('.photo-card:last-child'));
+      } else
+        Notify.failure('Sorry, there are no images matching your search query. Please try again.');
+    })
+    .catch(e => console.error(e));
+};
 
-async function onShowMore() {
-  API.increasePage();
-
-  if (API.totalHits <= 20) {
-    chekEndOfTotalHits();
-    return;
-  }
-
-  const result = await API.fetchData();
-
-  rewrightMarkup(result);
-  scrollAfterShowMore();
-
-  API.lastTotalHits();
-  lightbox.refresh();
-  Notiflix.Notify.success(`Hooray! We found ${API.totalHits} images.`);
-}
-
-function rewrightMarkup(markup) {
-  refs.gallery.insertAdjacentHTML('beforeend', template(markup));
-}
-
-function resetMarkup() {
-  refs.gallery.innerHTML = '';
-}
-
-function hideShowMoreBtn() {
-  refs.showMoreBtn.classList.add('is-hidden');
-}
-
-function showShowMoreBtn() {
-  refs.showMoreBtn.classList.remove('is-hidden');
-}
-
-function chekInputNotEmpty() {
-  Notiflix.Notify.failure('Please enter something in search field');
-
-  hideShowMoreBtn();
-  resetMarkup();
-}
-
-function chekEndOfTotalHits() {
-  hideShowMoreBtn();
-  Notiflix.Notify.info("We're sorry, but you've reached the end of search results");
-}
-
-function scrollAfterShowMore() {
-  let verticalParams = 0;
-
-  const intervalId = setInterval(() => {
-    window.scrollBy(0, verticalParams);
-    verticalParams += 1;
-
-    if (verticalParams === 20) {
-      clearInterval(intervalId);
-    }
-  }, 20);
-}
-
-refs.form.addEventListener('submit', onSearchForm);
-refs.showMoreBtn.addEventListener('click', onShowMore);
+form.addEventListener('submit', handleSearch);

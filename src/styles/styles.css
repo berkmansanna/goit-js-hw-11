@@ -84,20 +84,3 @@ img {
   font-size: 10px;
   width: calc(100% / 4 - 14px);
 }
-
-.load-more {
-  display: block;
-  margin: 10px auto;
-  border: 2px solid tomato;
-  border-radius: 7px;
-  background-color: transparent;
-}
-
-.load-more:hover {
-  background-color: tomato;
-  border: 2px solid inherit;
-}
-
-.load-more.is-hidden {
-  display: none;
-}
