@@ -26,8 +26,8 @@ function onSearch(e) {
   e.preventDefault();
   outputClear();
   apiService.resetPage();
-  apiService.q = e.currentTarget.elements.searchQuery.value;
-  if (apiService.q.trim() === '') {
+  apiService.params.q = e.currentTarget.elements.searchQuery.value;
+  if (apiService.params.q.trim() === '') {
     Notiflix.Notify.failure('Please fill in the field');
     return;
   }
