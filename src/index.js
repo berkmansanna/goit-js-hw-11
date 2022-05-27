@@ -1,6 +1,7 @@
 import Notiflix from 'notiflix';
 import SimpleLightbox from 'simplelightbox';
 import 'simplelightbox/dist/simple-lightbox.min.css';
+import throttle from 'lodash.throttle';
 
 import ApiService from './apies/searchImg.js';
 
@@ -25,13 +26,13 @@ function onSearch(e) {
   e.preventDefault();
   outputClear();
   apiService.resetPage();
-  apiService.query = e.currentTarget.elements.searchQuery.value;
-  if (apiService.query.trim() === '') {
+  apiService.q = e.currentTarget.elements.searchQuery.value;
+  if (apiService.q.trim() === '') {
     Notiflix.Notify.failure('Please fill in the field');
     return;
   }
 
-  apiService.getPicters().then(({ data }) => {
+  apiService.getPicters().then(data => {
     appendPicters(data.hits);
     lightbox.refresh();
     if (data.totalHits === 0) {
@@ -54,14 +55,25 @@ function outputClear() {
   refs.galleryEl.innerHTML = '';
 }
 
-refs.formEl.addEventListener('submit', onSearch);
-
-window.addEventListener('scroll', () => {
+function infiniteScroll() {
   const documentRect = document.documentElement.getBoundingClientRect();
-  if (documentRect.bottom < document.documentElement.clientHeight + 150) {
-    apiService.getPicters().then(({ data }) => {
-      appendPicters(data.hits);
-      lightbox.refresh();
-    });
+  if (documentRect.bottom < document.documentElement.clientHeight + 100) {
+    apiService
+      .getPicters()
+      .then(({ hits }) => {
+        if (hits.length === 0) {
+          Notiflix.Notify.failure('End');
+          return;
+        }
+        appendPicters(hits);
+        lightbox.refresh();
+      })
+      .catch(error => {
+        console.log(error);
+        return;
+      });
   }
-});
+}
+
+refs.formEl.addEventListener('submit', onSearch);
+window.addEventListener('scroll', throttle(infiniteScroll, 300));

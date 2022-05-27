@@ -1,27 +1,29 @@
 import axios from 'axios';
+
+const URL = 'https://pixabay.com/api/';
+
 export default class ApiService {
   constructor() {
-    this.searchQuery = '';
-    this.page = 1;
+    this.q = '';
   }
 
   async getPicters() {
-    const URL = 'https://pixabay.com/api/';
-    const API_KEY = '27513369-b4299cf044d06764b30420eb5';
-    const params = {
-      key: API_KEY,
-      q: this.searchQuery,
-      image_type: 'photo',
-      orientation: 'horizontal',
-      safesearch: 'true',
-      page: this.page,
-      per_page: 40,
-    };
     try {
-      const response = await axios.get(URL, { params });
-
+      const instance = axios.create({
+        baseURL: URL,
+        params: {
+          key: '27513369-b4299cf044d06764b30420eb5',
+          q: this.q,
+          image_type: 'photo',
+          orientation: 'horizontal',
+          safesearch: 'true',
+          page: 1,
+          per_page: 40,
+        },
+      });
+      const data = await instance.get('');
       this.incrementPage();
-      return response;
+      return data.data;
     } catch (error) {
       console.error(error);
     }
